@@ -35,7 +35,20 @@ By default, `go-tw` will check if a newer version of `tailwindcss` exists. If it
 To use a specific version, use the `-version` flag.
 
 ```shell
-go-tw -h -version v4.0.7
+ ❯  go-tw -h -version v4.0.7
+≈ tailwindcss v4.0.7
+
+Usage:
+  tailwindcss [--input input.css] [--output output.css] [--watch] [options…]
+
+Options:
+  -i, --input ··········· Input file
+  -o, --output ·········· Output file [default: `-`]
+  -w, --watch ··········· Watch for changes and rebuild as needed
+  -m, --minify ·········· Optimize and minify the output
+      --optimize ········ Optimize the output without minifying
+      --cwd ············· The current working directory [default: `.`]
+  -h, --help ············ Display usage information`
 ```
 
 ## Logging
