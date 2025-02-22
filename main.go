@@ -2,18 +2,17 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
+	"time"
 
+	"github.com/Piszmog/go-tw/client"
+	"github.com/Piszmog/go-tw/fs"
 	"github.com/Piszmog/go-tw/log"
 )
 
@@ -32,48 +31,67 @@ func main() {
 		return
 	}
 
+	c := client.New(logger, 30*time.Second)
+
 	version, args, err := getArgs()
 	if err != nil {
 		fmt.Println("failed to parse arguments: ", err)
 		return
 	}
 
-	actualVersion := version
-	if version == "latest" {
-		ver, verErr := getLatestVersion()
-		if verErr != nil {
-			fmt.Println("failed to determine latest version", verErr)
-			return
-		}
-		logger.Debug("Retrieved latest version", "version", ver)
-		actualVersion = ver
-	}
-
-	downloadDir, err := getDownloadDir()
+	downloadDir, err := fs.GetDownloadDir()
 	if err != nil {
 		fmt.Println("failed to determine directory to download tailwind to: ", err)
 		return
 	}
 
-	filePath := filepath.Join(downloadDir, "tailwindcss-"+actualVersion)
+	actualVersion := version
+	if version == "latest" {
+		ver, verErr := c.GetLatestVersion()
+		if verErr != nil {
+			if errors.Is(verErr, client.ErrHTTP) {
+				currVer, currErr := fs.GetCurrentVersion(downloadDir)
+				if currErr != nil {
+					fmt.Println("failed to check for latest version of tailwind and no version is installed: ", currErr)
+					return
+				}
+				fmt.Println("failed to fetch latest tailwindcss version: falling back to installed version " + currVer)
+				actualVersion = currVer
+			} else {
+				fmt.Println("failed to determine latest version", verErr)
+				return
+			}
+		} else {
+			logger.Debug("Retrieved latest version", "version", ver)
+			actualVersion = ver
+		}
+	}
 
-	if installed, err := isInstalled(filePath); err != nil {
-		fmt.Println("failed to check if tailwind is already installed: ", err)
-		return
-	} else if !installed {
-		downloadErr := download(logger, operatingSystem, arch, filePath, actualVersion)
-		if downloadErr != nil {
-			fmt.Println("failed to download tailwind: ", downloadErr)
+	filePath := filepath.Join(downloadDir, fs.PrefixTailwind+actualVersion)
+
+	exists := true
+	err = fs.Exists(filePath)
+	if err != nil {
+		if errors.Is(err, fs.ErrFileNotExists) {
+			exists = false
+		} else {
+			fmt.Println("failed to check if tailwind is already installed: ", err)
 			return
 		}
+	}
 
-		if exeErr := makeExecutable(filePath); exeErr != nil {
-			fmt.Println("failed to make tailwind executable: ", exeErr)
+	if !exists {
+		fmt.Println("Downloading tailwindcss " + actualVersion)
+		if err = c.Download(operatingSystem, arch, actualVersion, filePath); err != nil {
+			fmt.Println("failed to download tailwind: ", err)
 			return
 		}
-
-		if delErr := deleteOtherVersions(logger, downloadDir, actualVersion); delErr != nil {
-			fmt.Println("failed to delete older version: ", delErr)
+		if err = fs.MakeExecutable(filePath); err != nil {
+			fmt.Println("failed to make tailwind executable: ", err)
+			return
+		}
+		if err = fs.DeleteOtherVersions(logger, downloadDir, actualVersion); err != nil {
+			fmt.Println("failed to delete older version: ", err)
 			return
 		}
 	}
@@ -123,130 +141,6 @@ func getArgs() (string, []string, error) {
 	return version, filteredArgs, nil
 }
 
-func isInstalled(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-func download(logger *slog.Logger, operatingSystem string, arch string, path string, version string) error {
-	fileName := getName(operatingSystem, arch)
-	url := "https://github.com/tailwindlabs/tailwindcss/releases/download/" + version + "/" + fileName
-
-	logger.Debug("Downloading file", "url", url)
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("failed to download: " + resp.Status)
-	}
-
-	logger.Debug("Writing file", "path", path)
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = io.Copy(f, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getLatestVersion() (string, error) {
-	url := "https://api.github.com/repos/tailwindlabs/tailwindcss/releases/latest"
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	var release release
-	if err = json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return "", err
-	}
-
-	return release.TagName, nil
-}
-
-type release struct {
-	TagName string `json:"tag_name"`
-}
-
-func getName(os string, arch string) string {
-	muslPostfix := ""
-	if os == "linux" && isMusl() {
-		muslPostfix = "-musl"
-	}
-
-	osName := os
-	if osName == "darwin" {
-		osName = "macos"
-	}
-
-	archName := arch
-	if archName == "amd64" {
-		archName = "x64"
-	}
-
-	executablePostfix := ""
-	if os == "windows" {
-		executablePostfix = ".exe"
-	}
-
-	return "tailwindcss-" + osName + "-" + archName + muslPostfix + executablePostfix
-}
-
-func isMusl() bool {
-	data, err := os.ReadFile("/proc/self/maps")
-	if err != nil {
-		return false // Cannot determine, assume not musl
-	}
-	return strings.Contains(string(data), "musl")
-}
-
-func makeExecutable(path string) error {
-	err := os.Chmod(path, 0755)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func deleteOtherVersions(logger *slog.Logger, downloadDir string, version string) error {
-	entries, err := os.ReadDir(downloadDir)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		if strings.HasPrefix(entry.Name(), "tailwindcss-") && !strings.HasSuffix(entry.Name(), "-"+version) {
-			logger.Debug("Deleting old version", "file", entry.Name(), "dir", downloadDir)
-			if err = os.Remove(filepath.Join(downloadDir, entry.Name())); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func run(logger *slog.Logger, path string, args []string) error {
 	logger.Debug("Running command", "path", path, "args", args)
 	cmd := exec.Command(path, args...)
@@ -272,19 +166,4 @@ func run(logger *slog.Logger, path string, args []string) error {
 	}
 
 	return nil
-}
-
-func getDownloadDir() (string, error) {
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		return "", err
-	}
-
-	p := filepath.Join(cacheDir, "go-tw")
-
-	if err = os.MkdirAll(p, 0755); err != nil {
-		return "", err
-	}
-
-	return p, nil
 }
