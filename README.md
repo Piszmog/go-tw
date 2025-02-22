@@ -1,9 +1,9 @@
-# Go Tool for Tailwindcss
+# Go Tool for Tailwind CSS
 
 > [!NOTE]
 > This project is not officially associated with or endorsed by Tailwind Labs Inc.
 
-`go-tw` is an exectable to make it easier to integrate the Tailwindcss CLI into a 
+`go-tw` is an exectable to make it easier to integrate the [Tailwindcss CLI](https://tailwindcss.com/docs/installation/tailwind-cli) into a 
 Go project using the `go tool` directive.
 
 Instead of having to have a separate install for `tailwindcss`, either with `npm` or 
