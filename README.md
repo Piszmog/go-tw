@@ -32,7 +32,7 @@ When `go-tw` runs, it will install `tailwindcss` to your cache, for example `~/L
 
 By default, `go-tw` will check if a newer version of `tailwindcss` exists. If it does, it will download it and delete the older versions.
 
-To use a specific version, use the `-version` flag.
+To use a specific version, provide the `-version` flag.
 
 ```shell
  ❯  go-tw -h -version v4.0.7
