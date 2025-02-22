@@ -7,7 +7,7 @@
 Go project using the `go tool` directive.
 
 Instead of having to have a separate install for `tailwindcss`, either with `npm` or 
-the executable, a Go project can using `tailwindcss` using the `go tool` directive.
+the executable, a Go project can install and use `tailwindcss` with the `go tool` directive.
 
 ## Install
 
