@@ -1,4 +1,4 @@
-# Go Tool for Tailwindcss
+# Go Tool for Tailwind CSS
 
 > [!NOTE]
 > This project is not officially associated with or endorsed by Tailwind Labs Inc.
