@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -31,16 +32,25 @@ func New(logger *slog.Logger, timeout time.Duration) *Client {
 	}
 }
 
-func (c *Client) Download(operatingSystem string, arch string, version string, path string) error {
+func (c *Client) Download(ctx context.Context, operatingSystem string, arch string, version string, path string) error {
 	fileName := getName(operatingSystem, arch)
 	url := urlDownload + "/" + version + "/" + fileName
 
 	c.logger.Debug("Downloading file", "url", url)
-	resp, err := c.c.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+
+	resp, err := c.c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Error("failed to close body", "error", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		c.logger.Error("failed to download file", "status_code", resp.StatusCode)
@@ -82,12 +92,21 @@ func isMusl() bool {
 	return strings.Contains(string(data), "musl")
 }
 
-func (c *Client) GetLatestVersion() (string, error) {
-	resp, err := c.c.Get(urlLatestVersion)
+func (c *Client) GetLatestVersion(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlLatestVersion, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := c.c.Do(req)
 	if err != nil {
 		return "", ErrHTTP
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Error("failed to close body", "error", err)
+		}
+	}()
 
 	var release release
 	if err = json.NewDecoder(resp.Body).Decode(&release); err != nil {

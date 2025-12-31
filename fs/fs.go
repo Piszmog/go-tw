@@ -19,11 +19,14 @@ func Write(logger *slog.Logger, reader io.Reader, path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			logger.Error("failed to close file", "error", closeErr)
+		}
+	}()
 
 	_, err = io.Copy(f, reader)
 	return err
-
 }
 
 func Exists(path string) error {
@@ -50,8 +53,8 @@ func GetCurrentVersion(path string) (string, error) {
 			continue
 		}
 
-		if strings.HasPrefix(entry.Name(), PrefixTailwind) {
-			return strings.TrimPrefix(entry.Name(), PrefixTailwind), nil
+		if s, hasPrefix := strings.CutPrefix(entry.Name(), PrefixTailwind); hasPrefix {
+			return s, nil
 		}
 	}
 
@@ -66,7 +69,7 @@ func GetDownloadDir() (string, error) {
 
 	p := filepath.Join(cacheDir, "go-tw")
 
-	if err = os.MkdirAll(p, 0755); err != nil {
+	if err = os.MkdirAll(p, 0750); err != nil {
 		return "", err
 	}
 
@@ -96,7 +99,9 @@ func DeleteOtherVersions(logger *slog.Logger, downloadDir string, version string
 }
 
 func MakeExecutable(path string) error {
-	err := os.Chmod(path, 0755)
+	//nolint:gosec
+	// Files needs to be exexuted
+	err := os.Chmod(path, 0700)
 	if err != nil {
 		return err
 	}

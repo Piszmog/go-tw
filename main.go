@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -44,10 +45,12 @@ func main() {
 		fmt.Println("failed to determine directory to download tailwind to: ", err)
 		return
 	}
+	ctx := context.Background()
 
 	actualVersion := version
+	//nolint:nestif
 	if version == "latest" {
-		ver, verErr := c.GetLatestVersion()
+		ver, verErr := c.GetLatestVersion(ctx)
 		if verErr != nil {
 			if errors.Is(verErr, client.ErrHTTP) {
 				currVer, currErr := fs.GetCurrentVersion(downloadDir)
@@ -82,7 +85,7 @@ func main() {
 
 	if !exists {
 		fmt.Println("Downloading tailwindcss " + actualVersion)
-		if err = c.Download(operatingSystem, arch, actualVersion, filePath); err != nil {
+		if err = c.Download(ctx, operatingSystem, arch, actualVersion, filePath); err != nil {
 			fmt.Println("failed to download tailwind: ", err)
 			return
 		}
@@ -96,7 +99,7 @@ func main() {
 		}
 	}
 
-	if err := run(logger, filePath, args); err != nil {
+	if err := run(ctx, logger, filePath, args); err != nil {
 		fmt.Println("failed to run tailwind: ", err)
 	}
 }
@@ -130,9 +133,9 @@ func getArgs() (string, []string, error) {
 	return version, filteredArgs, nil
 }
 
-func run(logger *slog.Logger, path string, args []string) error {
+func run(ctx context.Context, logger *slog.Logger, path string, args []string) error {
 	logger.Debug("Running command", "path", path, "args", args)
-	cmd := exec.Command(path, args...)
+	cmd := exec.CommandContext(ctx, path, args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
