@@ -103,22 +103,11 @@ func main() {
 
 func isSupported(os string, arch string) bool {
 	switch os {
-	case "windows":
-		if arch != "amd64" {
-			return true
-		}
-	case "darwin":
-		if arch == "amd64" || arch == "arm64" {
-			return true
-		}
-	case "linux":
-		if arch == "amd64" || arch == "arm64" {
-			return true
-		}
+	case "windows", "darwin", "linux":
+		return arch == "amd64" || arch == "arm64"
 	default:
 		return false
 	}
-	return false
 }
 
 func getArgs() (string, []string, error) {
