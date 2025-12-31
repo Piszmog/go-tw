@@ -32,7 +32,7 @@ func New(logger *slog.Logger, timeout time.Duration) *Client {
 	}
 }
 
-func (c *Client) Download(ctx context.Context, operatingSystem string, arch string, version string, path string) error {
+func (c *Client) Download(ctx context.Context, operatingSystem string, arch string, version string, path string, downloadDir string) error {
 	fileName := getName(operatingSystem, arch)
 	url := urlDownload + "/" + version + "/" + fileName
 
@@ -57,7 +57,7 @@ func (c *Client) Download(ctx context.Context, operatingSystem string, arch stri
 		return ErrHTTP
 	}
 
-	return fs.Write(c.logger, resp.Body, path)
+	return fs.Write(c.logger, resp.Body, path, downloadDir)
 }
 
 func getName(os string, arch string) string {

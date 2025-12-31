@@ -13,9 +13,17 @@ const (
 	PrefixTailwind = "tailwindcss-"
 )
 
-func Write(logger *slog.Logger, reader io.Reader, path string) error {
+func Write(logger *slog.Logger, reader io.Reader, path string, downloadDir string) error {
 	logger.Debug("Writing file", "path", path)
-	f, err := os.Create(path)
+
+	// Validate path is within download directory
+	cleanPath := filepath.Clean(path)
+	cleanDir := filepath.Clean(downloadDir)
+	if !strings.HasPrefix(cleanPath, cleanDir+string(filepath.Separator)) {
+		return ErrInvalidPath
+	}
+
+	f, err := os.Create(cleanPath)
 	if err != nil {
 		return err
 	}
@@ -41,6 +49,8 @@ func Exists(path string) error {
 }
 
 var ErrFileNotExists = errors.New("file does not exist")
+var ErrNotInstalled = errors.New("tailwindcss is not currently installed")
+var ErrInvalidPath = errors.New("invalid path: attempting to write outside cache directory")
 
 func GetCurrentVersion(path string) (string, error) {
 	entries, err := os.ReadDir(path)
@@ -58,7 +68,7 @@ func GetCurrentVersion(path string) (string, error) {
 		}
 	}
 
-	return "", errors.New("tailwindcss is not currently installed")
+	return "", ErrNotInstalled
 }
 
 func GetDownloadDir() (string, error) {

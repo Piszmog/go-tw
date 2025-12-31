@@ -17,6 +17,8 @@ import (
 	"github.com/Piszmog/go-tw/log"
 )
 
+var ErrMissingVersionArg = errors.New("version flag passed but missing argument")
+
 func main() {
 	logger := log.New(
 		log.GetLevel(),
@@ -85,7 +87,7 @@ func main() {
 
 	if !exists {
 		fmt.Println("Downloading tailwindcss " + actualVersion)
-		if err = c.Download(ctx, operatingSystem, arch, actualVersion, filePath); err != nil {
+		if err = c.Download(ctx, operatingSystem, arch, actualVersion, filePath, downloadDir); err != nil {
 			fmt.Println("failed to download tailwind: ", err)
 			return
 		}
@@ -122,7 +124,7 @@ func getArgs() (string, []string, error) {
 	for i := 0; i < len(args); i++ {
 		if args[i] == "-version" {
 			if i+1 >= len(args) {
-				return "", nil, errors.New("version flag passed but missing argument")
+				return "", nil, ErrMissingVersionArg
 			}
 			version = args[i+1]
 			i++
