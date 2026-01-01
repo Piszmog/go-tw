@@ -13,17 +13,28 @@ const (
 	PrefixTailwind = "tailwindcss-"
 )
 
-func Write(logger *slog.Logger, reader io.Reader, path string) error {
+func Write(logger *slog.Logger, reader io.Reader, path string, downloadDir string) error {
 	logger.Debug("Writing file", "path", path)
-	f, err := os.Create(path)
+
+	// Validate path is within download directory
+	cleanPath := filepath.Clean(path)
+	cleanDir := filepath.Clean(downloadDir)
+	if !strings.HasPrefix(cleanPath, cleanDir+string(filepath.Separator)) {
+		return ErrInvalidPath
+	}
+
+	f, err := os.Create(cleanPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			logger.Error("failed to close file", "error", closeErr)
+		}
+	}()
 
 	_, err = io.Copy(f, reader)
 	return err
-
 }
 
 func Exists(path string) error {
@@ -38,6 +49,8 @@ func Exists(path string) error {
 }
 
 var ErrFileNotExists = errors.New("file does not exist")
+var ErrNotInstalled = errors.New("tailwindcss is not currently installed")
+var ErrInvalidPath = errors.New("invalid path: attempting to write outside cache directory")
 
 func GetCurrentVersion(path string) (string, error) {
 	entries, err := os.ReadDir(path)
@@ -50,12 +63,12 @@ func GetCurrentVersion(path string) (string, error) {
 			continue
 		}
 
-		if strings.HasPrefix(entry.Name(), PrefixTailwind) {
-			return strings.TrimPrefix(entry.Name(), PrefixTailwind), nil
+		if s, hasPrefix := strings.CutPrefix(entry.Name(), PrefixTailwind); hasPrefix {
+			return s, nil
 		}
 	}
 
-	return "", errors.New("tailwindcss is not currently installed")
+	return "", ErrNotInstalled
 }
 
 func GetDownloadDir() (string, error) {
@@ -66,7 +79,7 @@ func GetDownloadDir() (string, error) {
 
 	p := filepath.Join(cacheDir, "go-tw")
 
-	if err = os.MkdirAll(p, 0755); err != nil {
+	if err = os.MkdirAll(p, 0750); err != nil {
 		return "", err
 	}
 
@@ -96,7 +109,9 @@ func DeleteOtherVersions(logger *slog.Logger, downloadDir string, version string
 }
 
 func MakeExecutable(path string) error {
-	err := os.Chmod(path, 0755)
+	//nolint:gosec
+	// Files needs to be exexuted
+	err := os.Chmod(path, 0700)
 	if err != nil {
 		return err
 	}

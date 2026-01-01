@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,6 +16,8 @@ import (
 	"github.com/Piszmog/go-tw/fs"
 	"github.com/Piszmog/go-tw/log"
 )
+
+var ErrMissingVersionArg = errors.New("version flag passed but missing argument")
 
 func main() {
 	logger := log.New(
@@ -44,10 +47,12 @@ func main() {
 		fmt.Println("failed to determine directory to download tailwind to: ", err)
 		return
 	}
+	ctx := context.Background()
 
 	actualVersion := version
+	//nolint:nestif
 	if version == "latest" {
-		ver, verErr := c.GetLatestVersion()
+		ver, verErr := c.GetLatestVersion(ctx)
 		if verErr != nil {
 			if errors.Is(verErr, client.ErrHTTP) {
 				currVer, currErr := fs.GetCurrentVersion(downloadDir)
@@ -82,7 +87,7 @@ func main() {
 
 	if !exists {
 		fmt.Println("Downloading tailwindcss " + actualVersion)
-		if err = c.Download(operatingSystem, arch, actualVersion, filePath); err != nil {
+		if err = c.Download(ctx, operatingSystem, arch, actualVersion, filePath, downloadDir); err != nil {
 			fmt.Println("failed to download tailwind: ", err)
 			return
 		}
@@ -96,29 +101,18 @@ func main() {
 		}
 	}
 
-	if err := run(logger, filePath, args); err != nil {
+	if err := run(ctx, logger, filePath, args); err != nil {
 		fmt.Println("failed to run tailwind: ", err)
 	}
 }
 
 func isSupported(os string, arch string) bool {
 	switch os {
-	case "windows":
-		if arch != "amd64" {
-			return true
-		}
-	case "darwin":
-		if arch == "amd64" || arch == "arm64" {
-			return true
-		}
-	case "linux":
-		if arch == "amd64" || arch == "arm64" {
-			return true
-		}
+	case "windows", "darwin", "linux":
+		return arch == "amd64" || arch == "arm64"
 	default:
 		return false
 	}
-	return false
 }
 
 func getArgs() (string, []string, error) {
@@ -130,7 +124,7 @@ func getArgs() (string, []string, error) {
 	for i := 0; i < len(args); i++ {
 		if args[i] == "-version" {
 			if i+1 >= len(args) {
-				return "", nil, errors.New("version flag passed but missing argument")
+				return "", nil, ErrMissingVersionArg
 			}
 			version = args[i+1]
 			i++
@@ -141,9 +135,9 @@ func getArgs() (string, []string, error) {
 	return version, filteredArgs, nil
 }
 
-func run(logger *slog.Logger, path string, args []string) error {
+func run(ctx context.Context, logger *slog.Logger, path string, args []string) error {
 	logger.Debug("Running command", "path", path, "args", args)
-	cmd := exec.Command(path, args...)
+	cmd := exec.CommandContext(ctx, path, args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
