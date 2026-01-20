@@ -55,7 +55,7 @@ func (c *Client) Download(ctx context.Context, operatingSystem string, arch stri
 	}
 
 	if resp.ContentLength <= 0 {
-		return errors.New("invalid content length")
+		return ErrInvalidContentLength
 	}
 
 	if err := fs.Write(
@@ -70,7 +70,6 @@ func (c *Client) Download(ctx context.Context, operatingSystem string, arch stri
 	}
 
 	return nil
-
 }
 
 func getName(os string, arch string) string {
@@ -130,6 +129,7 @@ func (c *Client) GetLatestVersion(ctx context.Context) (string, error) {
 }
 
 var ErrHTTP = errors.New("failed to get the resource")
+var ErrInvalidContentLength = errors.New("invalid content length")
 
 type release struct {
 	TagName string `json:"tag_name"`

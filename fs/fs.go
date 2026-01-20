@@ -30,6 +30,7 @@ func Write(
 	}
 
 	tmp := cleanPath + ".tmp"
+	//nolint:gosec // path is validated to be within downloadDir
 	f, err := os.Create(tmp)
 	if err != nil {
 		return err
@@ -44,7 +45,7 @@ func Write(
 	}
 	if written != expected {
 		_ = os.Remove(tmp)
-		return errors.New("incomplete download")
+		return ErrIncompleteDownload
 	}
 	if err := os.Rename(tmp, cleanPath); err != nil {
 		_ = os.Remove(tmp)
@@ -67,6 +68,7 @@ func Exists(path string) error {
 var ErrFileNotExists = errors.New("file does not exist")
 var ErrNotInstalled = errors.New("tailwindcss is not currently installed")
 var ErrInvalidPath = errors.New("invalid path: attempting to write outside cache directory")
+var ErrIncompleteDownload = errors.New("incomplete download")
 
 func GetCurrentVersion(path string) (string, error) {
 	entries, err := os.ReadDir(path)
