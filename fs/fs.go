@@ -13,7 +13,13 @@ const (
 	PrefixTailwind = "tailwindcss-"
 )
 
-func Write(logger *slog.Logger, reader io.Reader, path string, downloadDir string) error {
+func Write(
+	logger *slog.Logger,
+	reader io.Reader,
+	path string,
+	downloadDir string,
+	expected int64,
+) error {
 	logger.Debug("Writing file", "path", path)
 
 	// Validate path is within download directory
@@ -23,18 +29,28 @@ func Write(logger *slog.Logger, reader io.Reader, path string, downloadDir strin
 		return ErrInvalidPath
 	}
 
-	f, err := os.Create(cleanPath)
+	tmp := cleanPath + ".tmp"
+	f, err := os.Create(tmp)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if closeErr := f.Close(); closeErr != nil {
-			logger.Error("failed to close file", "error", closeErr)
-		}
-	}()
-
-	_, err = io.Copy(f, reader)
-	return err
+	written, err := io.Copy(f, reader)
+	if closeErr := f.Close(); closeErr != nil && err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if written != expected {
+		_ = os.Remove(tmp)
+		return errors.New("incomplete download")
+	}
+	if err := os.Rename(tmp, cleanPath); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 func Exists(path string) error {

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Piszmog/go-tw/fs"
 )
@@ -23,12 +22,10 @@ type Client struct {
 	c      *http.Client
 }
 
-func New(logger *slog.Logger, timeout time.Duration) *Client {
+func New(logger *slog.Logger) *Client {
 	return &Client{
 		logger: logger,
-		c: &http.Client{
-			Timeout: timeout,
-		},
+		c:      &http.Client{},
 	}
 }
 
@@ -57,7 +54,23 @@ func (c *Client) Download(ctx context.Context, operatingSystem string, arch stri
 		return ErrHTTP
 	}
 
-	return fs.Write(c.logger, resp.Body, path, downloadDir)
+	if resp.ContentLength <= 0 {
+		return errors.New("invalid content length")
+	}
+
+	if err := fs.Write(
+		c.logger,
+		resp.Body,
+		path,
+		downloadDir,
+		resp.ContentLength,
+	); err != nil {
+		_ = os.Remove(path)
+		return err
+	}
+
+	return nil
+
 }
 
 func getName(os string, arch string) string {

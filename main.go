@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/Piszmog/go-tw/client"
 	"github.com/Piszmog/go-tw/fs"
@@ -34,7 +33,7 @@ func main() {
 		return
 	}
 
-	c := client.New(logger, 30*time.Second)
+	c := client.New(logger)
 
 	version, args, err := getArgs()
 	if err != nil {
@@ -104,7 +103,17 @@ func main() {
 			return
 		}
 	}
+	info, err := os.Stat(filePath)
+	if err != nil {
+		fmt.Println("tailwind binary missing:", err)
+		return
+	}
 
+	if info.Size() < 1024 {
+		_ = os.Remove(filePath)
+		fmt.Println("invalid tailwind binary detected, please retry")
+		return
+	}
 	if err := run(ctx, logger, filePath, args); err != nil {
 		fmt.Println("failed to run tailwind: ", err)
 	}
