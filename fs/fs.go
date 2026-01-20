@@ -64,7 +64,9 @@ func GetCurrentVersion(path string) (string, error) {
 		}
 
 		if s, hasPrefix := strings.CutPrefix(entry.Name(), PrefixTailwind); hasPrefix {
-			return s, nil
+			// Remove .exe extension if present (Windows)
+			version := strings.TrimSuffix(s, ".exe")
+			return version, nil
 		}
 	}
 
@@ -97,10 +99,14 @@ func DeleteOtherVersions(logger *slog.Logger, downloadDir string, version string
 			continue
 		}
 
-		if strings.HasPrefix(entry.Name(), PrefixTailwind) && !strings.HasSuffix(entry.Name(), "-"+version) {
-			logger.Debug("Deleting old version", "file", entry.Name(), "dir", downloadDir)
-			if err = os.Remove(filepath.Join(downloadDir, entry.Name())); err != nil {
-				return err
+		if strings.HasPrefix(entry.Name(), PrefixTailwind) {
+			// Remove .exe extension if present (Windows) for version comparison
+			fileName := strings.TrimSuffix(entry.Name(), ".exe")
+			if !strings.HasSuffix(fileName, "-"+version) {
+				logger.Debug("Deleting old version", "file", entry.Name(), "dir", downloadDir)
+				if err = os.Remove(filepath.Join(downloadDir, entry.Name())); err != nil {
+					return err
+				}
 			}
 		}
 	}

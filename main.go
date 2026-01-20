@@ -72,7 +72,11 @@ func main() {
 		}
 	}
 
-	filePath := filepath.Join(downloadDir, fs.PrefixTailwind+actualVersion)
+	fileName := fs.PrefixTailwind + actualVersion
+	if operatingSystem == "windows" {
+		fileName += ".exe"
+	}
+	filePath := filepath.Join(downloadDir, fileName)
 
 	exists := true
 	err = fs.Exists(filePath)
