@@ -60,3 +60,32 @@ Options:
 LOG_LEVEL=debug go-tw -h
 ```
 
+## Testing
+
+### Unit Tests
+
+Run the unit tests with:
+
+```shell
+go test ./...
+```
+
+### Integration Tests
+
+Integration tests verify cross-platform functionality by downloading and executing the real Tailwind CSS binary.
+
+**Run locally:**
+
+```shell
+go test -v -tags=integration ./...
+```
+
+**CI Testing:**
+
+Integration tests run automatically in GitHub Actions on:
+- Linux (amd64)
+- macOS (arm64)
+- Windows (amd64)
+
+**Note:** Integration tests download the latest Tailwind CSS binary (~15-20 MB) on first run, then cache it for subsequent runs.
+
