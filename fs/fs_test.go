@@ -19,9 +19,6 @@ func testLogger() *slog.Logger {
 
 func TestWrite(t *testing.T) {
 	t.Parallel()
-
-	t.Parallel()
-
 	logger := testLogger()
 
 	t.Run("Successful write", func(t *testing.T) {
