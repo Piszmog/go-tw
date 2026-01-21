@@ -59,6 +59,7 @@ func TestWrite(t *testing.T) {
 	})
 
 	t.Run("Size mismatch - too small", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "test.bin")
 		content := []byte("short")
@@ -70,6 +71,7 @@ func TestWrite(t *testing.T) {
 	})
 
 	t.Run("Size mismatch - too large", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "test.bin")
 		content := []byte("this is a very long string")
@@ -81,6 +83,7 @@ func TestWrite(t *testing.T) {
 	})
 
 	t.Run("No size validation when expectedSize is 0", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "test.bin")
 		content := []byte("any size")
@@ -95,6 +98,7 @@ func TestExists(t *testing.T) {
 	t.Parallel()
 
 	t.Run("File exists", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "exists.txt")
 		err := os.WriteFile(filePath, []byte("content"), 0600)
@@ -105,6 +109,7 @@ func TestExists(t *testing.T) {
 	})
 
 	t.Run("File does not exist", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "nonexistent.txt")
 
@@ -117,6 +122,7 @@ func TestGetCurrentVersion(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Single version found", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		fileName := "tailwindcss-v4.0.0"
 		err := os.WriteFile(filepath.Join(tmpDir, fileName), []byte{}, 0600)
@@ -128,6 +134,7 @@ func TestGetCurrentVersion(t *testing.T) {
 	})
 
 	t.Run("Windows executable with .exe extension", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		fileName := "tailwindcss-v4.0.0.exe"
 		err := os.WriteFile(filepath.Join(tmpDir, fileName), []byte{}, 0600)
@@ -139,6 +146,7 @@ func TestGetCurrentVersion(t *testing.T) {
 	})
 
 	t.Run("No tailwindcss files", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		err := os.WriteFile(filepath.Join(tmpDir, "other-file.txt"), []byte{}, 0600)
 		require.NoError(t, err)
@@ -148,6 +156,7 @@ func TestGetCurrentVersion(t *testing.T) {
 	})
 
 	t.Run("Empty directory", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 
 		_, err := fs.GetCurrentVersion(tmpDir)
@@ -155,6 +164,7 @@ func TestGetCurrentVersion(t *testing.T) {
 	})
 
 	t.Run("Ignores directories", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		err := os.Mkdir(filepath.Join(tmpDir, "tailwindcss-v4.0.0"), 0750)
 		require.NoError(t, err)
@@ -168,6 +178,7 @@ func TestGetDownloadDir(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Creates download directory", func(t *testing.T) {
+		t.Parallel()
 		dir, err := fs.GetDownloadDir()
 		require.NoError(t, err)
 		assert.NotEmpty(t, dir)
@@ -186,6 +197,7 @@ func TestDeleteOtherVersions(t *testing.T) {
 	logger := testLogger()
 
 	t.Run("Deletes old versions", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 
 		// Create multiple versions
@@ -210,6 +222,7 @@ func TestDeleteOtherVersions(t *testing.T) {
 	})
 
 	t.Run("Handles Windows .exe files", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 
 		v1 := filepath.Join(tmpDir, "tailwindcss-v3.0.0.exe")
@@ -228,6 +241,7 @@ func TestDeleteOtherVersions(t *testing.T) {
 	})
 
 	t.Run("Keeps non-tailwind files", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 
 		tailwind := filepath.Join(tmpDir, "tailwindcss-v4.0.0")
@@ -247,6 +261,7 @@ func TestDeleteOtherVersions(t *testing.T) {
 	})
 
 	t.Run("Ignores directories", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 
 		file := filepath.Join(tmpDir, "tailwindcss-v4.0.0")
@@ -271,6 +286,7 @@ func TestMakeExecutable(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Makes file executable", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "test.bin")
 		err := os.WriteFile(filePath, []byte("content"), 0600)
@@ -289,6 +305,7 @@ func TestMakeExecutable(t *testing.T) {
 	})
 
 	t.Run("File does not exist", func(t *testing.T) {
+		t.Parallel()
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "nonexistent.bin")
 

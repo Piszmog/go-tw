@@ -22,6 +22,7 @@ func testLogger() *slog.Logger {
 }
 
 func TestGetName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		os       string
@@ -38,6 +39,7 @@ func TestGetName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := client.GetName(tt.os, tt.arch)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -45,6 +47,7 @@ func TestGetName(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
+	t.Parallel()
 	logger := testLogger()
 	timeout := 30 * time.Second
 
@@ -55,7 +58,9 @@ func TestNew(t *testing.T) {
 }
 
 func TestGetLatestVersion(t *testing.T) {
+	t.Parallel()
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			response := map[string]string{"tag_name": "v4.0.0"}
@@ -72,6 +77,7 @@ func TestGetLatestVersion(t *testing.T) {
 	})
 
 	t.Run("HTTP Error - Internal Server Error", func(t *testing.T) {
+		t.Parallel()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
@@ -85,6 +91,7 @@ func TestGetLatestVersion(t *testing.T) {
 	})
 
 	t.Run("Invalid JSON", func(t *testing.T) {
+		t.Parallel()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("invalid json"))
@@ -99,6 +106,7 @@ func TestGetLatestVersion(t *testing.T) {
 	})
 
 	t.Run("Context cancellation", func(t *testing.T) {
+		t.Parallel()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(100 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
@@ -117,7 +125,9 @@ func TestGetLatestVersion(t *testing.T) {
 }
 
 func TestDownload(t *testing.T) {
+	t.Parallel()
 	t.Run("Successful download", func(t *testing.T) {
+		t.Parallel()
 		content := []byte("fake tailwindcss binary content here")
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -144,6 +154,7 @@ func TestDownload(t *testing.T) {
 	})
 
 	t.Run("HTTP Error triggers retry", func(t *testing.T) {
+		t.Parallel()
 		attemptCount := 0
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			attemptCount++
@@ -165,6 +176,7 @@ func TestDownload(t *testing.T) {
 	})
 
 	t.Run("Context cancellation", func(t *testing.T) {
+		t.Parallel()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(100 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
@@ -185,6 +197,7 @@ func TestDownload(t *testing.T) {
 	})
 
 	t.Run("Invalid path - outside directory", func(t *testing.T) {
+		t.Parallel()
 		content := []byte("fake content")
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
