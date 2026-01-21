@@ -29,14 +29,14 @@ func main() {
 	arch := runtime.GOARCH
 
 	logger.Debug("Running platform", "os", operatingSystem, "arch", arch)
-	if !isSupported(operatingSystem, arch) {
+	if !IsSupported(operatingSystem, arch) {
 		fmt.Printf("OS '%s' and arch '%s' is not supported\n", operatingSystem, arch)
 		return
 	}
 
-	c := client.New(logger, 30*time.Second)
+	c := client.New(logger, 3*time.Minute)
 
-	version, args, err := getArgs()
+	version, args, err := GetArgs()
 	if err != nil {
 		fmt.Println("failed to parse arguments: ", err)
 		return
@@ -110,7 +110,8 @@ func main() {
 	}
 }
 
-func isSupported(os string, arch string) bool {
+// IsSupported checks if the given OS and architecture combination is supported
+func IsSupported(os string, arch string) bool {
 	switch os {
 	case "windows", "darwin", "linux":
 		return arch == "amd64" || arch == "arm64"
@@ -119,7 +120,8 @@ func isSupported(os string, arch string) bool {
 	}
 }
 
-func getArgs() (string, []string, error) {
+// GetArgs parses command line arguments and extracts the version flag
+func GetArgs() (string, []string, error) {
 	args := os.Args[1:]
 
 	var filteredArgs []string
