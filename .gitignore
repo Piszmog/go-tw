@@ -1,2 +1,9 @@
 # Added by goreleaser init:
 dist/
+
+# Integration test artifacts
+go-tw
+go-tw.exe
+output.css
+testdata/**/*.css
+!testdata/**/input.css
