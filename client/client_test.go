@@ -3,12 +3,12 @@ package client_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -132,7 +132,7 @@ func TestDownload(t *testing.T) {
 		content := []byte("fake tailwindcss binary content here")
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Length", fmt.Sprintf("%d", len(content)))
+			w.Header().Set("Content-Length", strconv.Itoa(len(content)))
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(content)
 		}))
