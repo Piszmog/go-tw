@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,16 +23,41 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.DiscardHandler)
 }
 
+// isMuslEnvironment mirrors the production musl detection logic so TestGetName
+// can compute the correct expected value for Linux regardless of whether the
+// test runs on a glibc or musl host.
+func isMuslEnvironment() bool {
+	if data, err := os.ReadFile("/proc/self/maps"); err == nil {
+		if strings.Contains(string(data), "musl") {
+			return true
+		}
+	}
+	for _, path := range []string{
+		"/lib/ld-musl-x86_64.so.1",
+		"/lib/ld-musl-aarch64.so.1",
+		"/lib/ld-musl-armhf.so.1",
+	} {
+		if _, err := os.Stat(path); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 func TestGetName(t *testing.T) {
 	t.Parallel()
+	linuxSuffix := ""
+	if isMuslEnvironment() {
+		linuxSuffix = "-musl"
+	}
 	tests := []struct {
 		name     string
 		os       string
 		arch     string
 		expected string
 	}{
-		{"Linux AMD64", "linux", "amd64", "tailwindcss-linux-x64"},
-		{"Linux ARM64", "linux", "arm64", "tailwindcss-linux-arm64"},
+		{"Linux AMD64", "linux", "amd64", "tailwindcss-linux-x64" + linuxSuffix},
+		{"Linux ARM64", "linux", "arm64", "tailwindcss-linux-arm64" + linuxSuffix},
 		{"Darwin AMD64", "darwin", "amd64", "tailwindcss-macos-x64"},
 		{"Darwin ARM64", "darwin", "arm64", "tailwindcss-macos-arm64"},
 		{"Windows AMD64", "windows", "amd64", "tailwindcss-windows-x64.exe"},
@@ -131,7 +158,7 @@ func TestDownload(t *testing.T) {
 		content := []byte("fake tailwindcss binary content here")
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Length", string(rune(len(content))))
+			w.Header().Set("Content-Length", strconv.Itoa(len(content)))
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(content)
 		}))

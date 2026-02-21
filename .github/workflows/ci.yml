@@ -75,3 +75,23 @@ jobs:
         run: go test -v -timeout=10m -tags=integration ./...
         env:
           LOG_LEVEL: debug
+  integration-test-musl:
+    name: Integration Test (musl/Alpine)
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.24-alpine
+    needs:
+      - lint
+      - test
+    steps:
+      - name: Install dependencies
+        run: apk add --no-cache git libgcc libstdc++
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Run Integration Tests
+        run: go test -v -timeout=10m -tags=integration ./...
+        env:
+          LOG_LEVEL: debug
+          # -buildvcs=false prevents "error obtaining VCS status" in containers
+          # where the git directory is owned by a different user
+          GOFLAGS: -buildvcs=false
