@@ -149,14 +149,14 @@ func run(ctx context.Context, logger *slog.Logger, path string, args []string) e
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
 	outStr := stdout.String()
 	errStr := stderr.String()
 
 	logger.Debug("Command", "out", outStr, "err", errStr)
+
+	if err != nil {
+		return err
+	}
 
 	if len(outStr) > 0 && len(args) > 0 {
 		fmt.Println(outStr)
