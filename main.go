@@ -44,7 +44,7 @@ func execute() error {
 
 	c := client.New(logger, 3*time.Minute)
 
-	version, args, err := GetArgs()
+	version, args, err := GetArgs(os.Args[1:])
 	if err != nil {
 		return fmt.Errorf("failed to parse arguments: %w", err)
 	}
@@ -122,9 +122,7 @@ func IsSupported(os string, arch string) bool {
 }
 
 // GetArgs parses command line arguments and extracts the version flag
-func GetArgs() (string, []string, error) {
-	args := os.Args[1:]
-
+func GetArgs(args []string) (string, []string, error) {
 	var filteredArgs []string
 	version := "latest"
 

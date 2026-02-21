@@ -1,7 +1,6 @@
 package main_test
 
 import (
-	"os"
 	"testing"
 
 	main "github.com/Piszmog/go-tw"
@@ -98,12 +97,7 @@ func TestGetArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Save and restore os.Args
-			oldArgs := os.Args
-			defer func() { os.Args = oldArgs }()
-			os.Args = append([]string{"go-tw"}, tt.args...)
-
-			version, args, err := main.GetArgs()
+			version, args, err := main.GetArgs(tt.args)
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
