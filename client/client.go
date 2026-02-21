@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -73,28 +74,47 @@ func (c *Client) Download(ctx context.Context, operatingSystem string, arch stri
 	return fmt.Errorf("%w: %w", ErrDownloadFailed, lastErr)
 }
 
-// fileReader is an interface for reading file contents
+// fileReader is an interface for reading file contents and checking file existence
 type fileReader interface {
 	ReadFile(path string) ([]byte, error)
+	FileExists(path string) bool
 }
 
-// osFileReader implements fileReader using os.ReadFile
+// osFileReader implements fileReader using os package functions
 type osFileReader struct{}
 
 func (o osFileReader) ReadFile(path string) ([]byte, error) {
-	//nolint:gosec // G304: Reading /proc/self/maps for musl detection, path is not user-controlled
+	//nolint:gosec // G304: path is not user-controlled, only called with hardcoded paths
 	return os.ReadFile(path)
+}
+
+func (o osFileReader) FileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // defaultFileReader is used in production
 var defaultFileReader fileReader = osFileReader{}
 
+// muslLinkers are the well-known paths for the musl dynamic linker on Linux
+var muslLinkers = []string{
+	"/lib/ld-musl-x86_64.so.1",
+	"/lib/ld-musl-aarch64.so.1",
+	"/lib/ld-musl-armhf.so.1",
+}
+
 func isMusl(reader fileReader) bool {
-	data, err := reader.ReadFile("/proc/self/maps")
-	if err != nil {
-		return false // Cannot determine, assume not musl
+	// Strategy 1: check /proc/self/maps for "musl".
+	// Works when the binary is dynamically linked (CGO_ENABLED=1).
+	if data, err := reader.ReadFile("/proc/self/maps"); err == nil {
+		if strings.Contains(string(data), "musl") {
+			return true
+		}
 	}
-	return strings.Contains(string(data), "musl")
+
+	// Strategy 2: check for the musl dynamic linker at well-known paths.
+	// Works for statically compiled Go binaries (CGO_ENABLED=0) on musl systems.
+	return slices.ContainsFunc(muslLinkers, reader.FileExists)
 }
 
 // GetName generates the tailwindcss binary filename for the given OS and architecture
