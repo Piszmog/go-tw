@@ -74,13 +74,13 @@ func (c *Client) Download(ctx context.Context, operatingSystem string, arch stri
 	return fmt.Errorf("%w: %w", ErrDownloadFailed, lastErr)
 }
 
-// fileReader is an interface for reading file contents and checking file existence
-type fileReader interface {
+// FileReader is an interface for reading file contents and checking file existence
+type FileReader interface {
 	ReadFile(path string) ([]byte, error)
 	FileExists(path string) bool
 }
 
-// osFileReader implements fileReader using os package functions
+// osFileReader implements FileReader using os package functions
 type osFileReader struct{}
 
 func (o osFileReader) ReadFile(path string) ([]byte, error) {
@@ -94,7 +94,7 @@ func (o osFileReader) FileExists(path string) bool {
 }
 
 // defaultFileReader is used in production
-var defaultFileReader fileReader = osFileReader{}
+var defaultFileReader FileReader = osFileReader{}
 
 // muslLinkers are the well-known paths for the musl dynamic linker on Linux
 var muslLinkers = []string{
@@ -103,7 +103,7 @@ var muslLinkers = []string{
 	"/lib/ld-musl-armhf.so.1",
 }
 
-func isMusl(reader fileReader) bool {
+func isMusl(reader FileReader) bool {
 	// Strategy 1: check /proc/self/maps for "musl".
 	// Works when the binary is dynamically linked (CGO_ENABLED=1).
 	if data, err := reader.ReadFile("/proc/self/maps"); err == nil {
@@ -118,12 +118,13 @@ func isMusl(reader fileReader) bool {
 }
 
 // GetName generates the tailwindcss binary filename for the given OS and architecture
-// Exported for testing
 func GetName(os string, arch string) string {
-	return getNameWithReader(os, arch, defaultFileReader)
+	return GetNameWithReader(os, arch, defaultFileReader)
 }
 
-func getNameWithReader(os string, arch string, reader fileReader) string {
+// GetNameWithReader generates the tailwindcss binary filename, using the provided FileReader
+// for musl detection. Useful for testing.
+func GetNameWithReader(os string, arch string, reader FileReader) string {
 	muslPostfix := ""
 	if os == "linux" && isMusl(reader) {
 		muslPostfix = "-musl"
@@ -153,7 +154,7 @@ func (c *Client) GetLatestVersion(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	resp, err := c.c.Do(req)
+	resp, err := c.c.Do(req) //nolint:gosec // G704: URL is a hardcoded GitHub API constant, not user input
 	if err != nil {
 		return "", ErrHTTP
 	}
@@ -179,7 +180,7 @@ func (c *Client) downloadAttempt(ctx context.Context, url string, path string, d
 		return err
 	}
 
-	resp, err := c.c.Do(req)
+	resp, err := c.c.Do(req) //nolint:gosec // G704: URL is derived from a hardcoded GitHub releases constant, not user input
 	if err != nil {
 		return err
 	}

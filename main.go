@@ -143,7 +143,7 @@ func GetArgs() (string, []string, error) {
 
 func run(ctx context.Context, logger *slog.Logger, path string, args []string) error {
 	logger.Debug("Running command", "path", path, "args", args)
-	cmd := exec.CommandContext(ctx, path, args...)
+	cmd := exec.CommandContext(ctx, path, args...) //nolint:gosec // G204: path is the downloaded tailwindcss binary, not user input
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

@@ -1,13 +1,14 @@
-package client
+package client_test
 
 import (
 	"os"
 	"testing"
 
+	"github.com/Piszmog/go-tw/client"
 	"github.com/stretchr/testify/assert"
 )
 
-// mockFileReader is a test double for fileReader
+// mockFileReader is a test double for client.FileReader
 type mockFileReader struct {
 	files  map[string][]byte
 	exists map[string]bool
@@ -24,67 +25,6 @@ func (m *mockFileReader) FileExists(path string) bool {
 	return m.exists[path]
 }
 
-func TestIsMusl(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name     string
-		reader   *mockFileReader
-		expected bool
-	}{
-		{
-			name: "musl found in /proc/self/maps",
-			reader: &mockFileReader{
-				files: map[string][]byte{
-					"/proc/self/maps": []byte("7f00 r--p 00000000 08:01 /lib/ld-musl-x86_64.so.1"),
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "musl linker exists on disk (static binary on musl)",
-			reader: &mockFileReader{
-				files: map[string][]byte{
-					"/proc/self/maps": []byte("7f00 r--p 00000000 08:01 /lib/x86_64-linux-gnu/libc.so.6"),
-				},
-				exists: map[string]bool{
-					"/lib/ld-musl-x86_64.so.1": true,
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "aarch64 musl linker exists on disk",
-			reader: &mockFileReader{
-				exists: map[string]bool{
-					"/lib/ld-musl-aarch64.so.1": true,
-				},
-			},
-			expected: true,
-		},
-		{
-			name:     "no maps file and no linker (static binary on glibc)",
-			reader:   &mockFileReader{},
-			expected: false,
-		},
-		{
-			name: "glibc in maps and no musl linker",
-			reader: &mockFileReader{
-				files: map[string][]byte{
-					"/proc/self/maps": []byte("7f00 r--p 00000000 08:01 /lib/x86_64-linux-gnu/libc.so.6"),
-				},
-			},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, tt.expected, isMusl(tt.reader))
-		})
-	}
-}
-
 func TestGetNameWithReader(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -95,12 +35,23 @@ func TestGetNameWithReader(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "Linux AMD64 musl via maps",
+			name: "Linux AMD64 musl via /proc/self/maps",
 			os:   "linux",
 			arch: "amd64",
 			reader: &mockFileReader{
 				files: map[string][]byte{
-					"/proc/self/maps": []byte("/lib/ld-musl-x86_64.so.1"),
+					"/proc/self/maps": []byte("7f00 r--p 00000000 08:01 /lib/ld-musl-x86_64.so.1"),
+				},
+			},
+			expected: "tailwindcss-linux-x64-musl",
+		},
+		{
+			name: "Linux AMD64 musl via linker file (static binary)",
+			os:   "linux",
+			arch: "amd64",
+			reader: &mockFileReader{
+				exists: map[string]bool{
+					"/lib/ld-musl-x86_64.so.1": true,
 				},
 			},
 			expected: "tailwindcss-linux-x64-musl",
@@ -117,7 +68,18 @@ func TestGetNameWithReader(t *testing.T) {
 			expected: "tailwindcss-linux-arm64-musl",
 		},
 		{
-			name:     "Linux AMD64 glibc",
+			name: "Linux AMD64 glibc in maps no musl linker",
+			os:   "linux",
+			arch: "amd64",
+			reader: &mockFileReader{
+				files: map[string][]byte{
+					"/proc/self/maps": []byte("7f00 r--p 00000000 08:01 /lib/x86_64-linux-gnu/libc.so.6"),
+				},
+			},
+			expected: "tailwindcss-linux-x64",
+		},
+		{
+			name:     "Linux AMD64 no files (static binary on glibc)",
 			os:       "linux",
 			arch:     "amd64",
 			reader:   &mockFileReader{},
@@ -129,7 +91,7 @@ func TestGetNameWithReader(t *testing.T) {
 			arch: "arm64",
 			reader: &mockFileReader{
 				files: map[string][]byte{
-					"/proc/self/maps": []byte("/lib/ld-musl-x86_64.so.1"),
+					"/proc/self/maps": []byte("7f00 r--p 00000000 08:01 /lib/ld-musl-x86_64.so.1"),
 				},
 			},
 			expected: "tailwindcss-macos-arm64",
@@ -150,7 +112,7 @@ func TestGetNameWithReader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.expected, getNameWithReader(tt.os, tt.arch, tt.reader))
+			assert.Equal(t, tt.expected, client.GetNameWithReader(tt.os, tt.arch, tt.reader))
 		})
 	}
 }
