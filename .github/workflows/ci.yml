@@ -84,8 +84,8 @@ jobs:
       - lint
       - test
     steps:
-      - name: Install git
-        run: apk add --no-cache git
+      - name: Install dependencies
+        run: apk add --no-cache git libgcc libstdc++
       - name: Checkout
         uses: actions/checkout@v5
       - name: Run Integration Tests
