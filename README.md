@@ -51,6 +51,20 @@ Options:
   -h, --help ············ Display usage information`
 ```
 
+## Alpine Linux
+
+On Alpine Linux, the `tailwindcss` musl binary requires `libgcc` and `libstdc++`. Install them with:
+
+```shell
+apk add --no-cache libgcc libstdc++
+```
+
+In a Dockerfile:
+
+```dockerfile
+RUN apk add --no-cache libgcc libstdc++
+```
+
 ## Logging
 
 `go-tw` has debug logging to help troubleshoot problems. Set the environment variable
