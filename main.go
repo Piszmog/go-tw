@@ -18,8 +18,17 @@ import (
 )
 
 var ErrMissingVersionArg = errors.New("version flag passed but missing argument")
+var ErrUnsupportedPlatform = errors.New("unsupported platform")
 
 func main() {
+	if err := execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+//nolint:cyclop // linear flow with early returns; splitting would obscure the sequence
+func execute() error {
 	logger := log.New(
 		log.GetLevel(),
 		log.GetOutput(),
@@ -30,22 +39,19 @@ func main() {
 
 	logger.Debug("Running platform", "os", operatingSystem, "arch", arch)
 	if !IsSupported(operatingSystem, arch) {
-		fmt.Printf("OS '%s' and arch '%s' is not supported\n", operatingSystem, arch)
-		return
+		return fmt.Errorf("%w: OS '%s' and arch '%s'", ErrUnsupportedPlatform, operatingSystem, arch)
 	}
 
 	c := client.New(logger, 3*time.Minute)
 
 	version, args, err := GetArgs()
 	if err != nil {
-		fmt.Println("failed to parse arguments: ", err)
-		return
+		return fmt.Errorf("failed to parse arguments: %w", err)
 	}
 
 	downloadDir, err := fs.GetDownloadDir()
 	if err != nil {
-		fmt.Println("failed to determine directory to download tailwind to: ", err)
-		return
+		return fmt.Errorf("failed to determine directory to download tailwind to: %w", err)
 	}
 	ctx := context.Background()
 
@@ -57,14 +63,12 @@ func main() {
 			if errors.Is(verErr, client.ErrHTTP) {
 				currVer, currErr := fs.GetCurrentVersion(downloadDir)
 				if currErr != nil {
-					fmt.Println("failed to check for latest version of tailwind and no version is installed: ", currErr)
-					return
+					return fmt.Errorf("failed to check for latest version of tailwind and no version is installed: %w", currErr)
 				}
 				fmt.Println("failed to fetch latest tailwindcss version: falling back to installed version " + currVer)
 				actualVersion = currVer
 			} else {
-				fmt.Println("failed to determine latest version", verErr)
-				return
+				return fmt.Errorf("failed to determine latest version: %w", verErr)
 			}
 		} else {
 			logger.Debug("Retrieved latest version", "version", ver)
@@ -84,30 +88,27 @@ func main() {
 		if errors.Is(err, fs.ErrFileNotExists) {
 			exists = false
 		} else {
-			fmt.Println("failed to check if tailwind is already installed: ", err)
-			return
+			return fmt.Errorf("failed to check if tailwind is already installed: %w", err)
 		}
 	}
 
 	if !exists {
 		fmt.Println("Downloading tailwindcss " + actualVersion)
 		if err = c.Download(ctx, operatingSystem, arch, actualVersion, filePath, downloadDir); err != nil {
-			fmt.Println("failed to download tailwind: ", err)
-			return
+			return fmt.Errorf("failed to download tailwind: %w", err)
 		}
 		if err = fs.MakeExecutable(filePath); err != nil {
-			fmt.Println("failed to make tailwind executable: ", err)
-			return
+			return fmt.Errorf("failed to make tailwind executable: %w", err)
 		}
 		if err = fs.DeleteOtherVersions(logger, downloadDir, actualVersion); err != nil {
-			fmt.Println("failed to delete older version: ", err)
-			return
+			return fmt.Errorf("failed to delete older version: %w", err)
 		}
 	}
 
 	if err := run(ctx, logger, filePath, args); err != nil {
-		fmt.Println("failed to run tailwind: ", err)
+		return fmt.Errorf("failed to run tailwind: %w", err)
 	}
+	return nil
 }
 
 // IsSupported checks if the given OS and architecture combination is supported
